@@ -9,7 +9,22 @@ require('dotenv').config()
 const get = (url, ...rest) => axios.get(url+`?client_id=${process.env.CLIENT_ID}&client_secret=${process.env.CLIENT_SECRET}`);
 const app = express();
 
-app.use(cors())
+if (process.env.NODE_ENV === "production") {
+  const whitelist = ["https://github-list.github.io"]
+  const corsOptions = {
+    origin: function (origin, callback) {
+      if (whitelist.indexOf(origin) !== -1) {
+        callback(null, true)
+      } else {
+        callback(new Error('Not allowed by CORS'))
+      }
+    }
+  }
+  
+  app.use(cors(corsOptions));
+} else {
+  app.use(cors());
+}
 
 const getDataFromRepo = (repo) => (
   {
@@ -119,6 +134,11 @@ app.get("/user/:user", async (req, res) => {
       error: "Internal error"
     })
   }
+})
+
+app.use((err, req, res, next) => {
+  res.status(500)
+  res.json({ ok: false, error: err.message })
 })
 
 app.listen(process.env.PORT, () => {
